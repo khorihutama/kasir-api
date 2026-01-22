@@ -30,9 +30,9 @@ var product = []Product{
 }
 
 var category = []Category{
-	{ID: 1, Name: "Food", Description: "Ini makanan"},
-	{ID: 2, Name: "Drink", Description: "Ini minuman"},
-	{ID: 3, Name: "Snack", Description: "Ini snack"},
+	{ID: 1, Name: "Food", Description: "Makanan kebutuhan sehari-hari"},
+	{ID: 2, Name: "Drink", Description: "Minuman segar"},
+	{ID: 3, Name: "Snack", Description: "Aneka camilan ringan"},
 }
 
 // get detail product /api/product/{id}
