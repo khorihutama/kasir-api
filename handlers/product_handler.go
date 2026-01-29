@@ -57,6 +57,15 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate required fields
+	if product.Name == "" || product.Price <= 0 || product.Stock < 0 || product.CategoryID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Name, price, stock, and category_id are required",
+		})
+		return
+	}
+
 	err = h.service.Create(&product)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -130,6 +139,15 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Validate required fields
+	if product.Name == "" || product.Price <= 0 || product.Stock < 0 || product.CategoryID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Name, price, stock, and category_id are required",
 		})
 		return
 	}

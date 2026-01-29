@@ -95,3 +95,13 @@ func (repo *CategoryRepository) Delete(id int) error {
 
 	return err
 }
+
+func (repo *CategoryRepository) Exists(categoryID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1)"
+	err := repo.db.QueryRow(query, categoryID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}

@@ -7,11 +7,15 @@ import (
 )
 
 type ProductRepository struct {
-	db *sql.DB
+	db           *sql.DB
+	categoryRepo *CategoryRepository
 }
 
-func NewProductRepository(db *sql.DB) *ProductRepository {
-	return &ProductRepository{db: db}
+func NewProductRepository(db *sql.DB, categoryRepo *CategoryRepository) *ProductRepository {
+	return &ProductRepository{
+		db:           db,
+		categoryRepo: categoryRepo,
+	}
 }
 
 func (repo *ProductRepository) GetAll() ([]models.Product, error) {
@@ -37,30 +41,53 @@ func (repo *ProductRepository) GetAll() ([]models.Product, error) {
 }
 
 func (repo *ProductRepository) Create(product *models.Product) error {
-	query := "INSERT INTO products (name, price, stock) VALUES ($1, $2, $3) RETURNING id"
-	err := repo.db.QueryRow(query, product.Name, product.Price, product.Stock).Scan(&product.ID)
+	exists, err := repo.categoryRepo.Exists(product.CategoryID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("Category not found")
+	}
+
+	query := "INSERT INTO products (name, price, stock, category_id) VALUES ($1, $2, $3, $4) RETURNING id"
+	err = repo.db.QueryRow(query, product.Name, product.Price, product.Stock, product.CategoryID).Scan(&product.ID)
 	return err
 }
 
 func (repo *ProductRepository) GetById(id int) (*models.Product, error) {
-	query := "SELECT id, name, price, stock FROM products WHERE id = $1"
+	query := `SELECT p.id, p.name, p.price, p.stock, c.name as category_name 
+			  FROM products p 
+			  LEFT JOIN categories c ON p.category_id = c.id 
+			  WHERE p.id = $1`
 
 	var p models.Product
-	err := repo.db.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Price, &p.Stock)
+	var categoryName sql.NullString
+	err := repo.db.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Price, &p.Stock, &categoryName)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("Product not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	if categoryName.Valid {
+		p.CategoryName = categoryName.String
+	}
 
 	return &p, nil
 }
 
 func (repo *ProductRepository) Update(product *models.Product) error {
-	query := "UPDATE products SET name = $1, price = $2, stock = $3 WHERE id = $4"
+	exists, err := repo.categoryRepo.Exists(product.CategoryID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("Category not found")
+	}
 
-	result, err := repo.db.Exec(query, product.Name, product.Price, product.Stock, product.ID)
+	query := "UPDATE products SET name = $1, price = $2, stock = $3, category_id = $4 WHERE id = $5"
+
+	result, err := repo.db.Exec(query, product.Name, product.Price, product.Stock, product.CategoryID, product.ID)
 
 	if err != nil {
 		return err
