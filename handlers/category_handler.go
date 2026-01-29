@@ -90,7 +90,7 @@ func (h *CategoryHandler) HandleCategoriesByID(w http.ResponseWriter, r *http.Re
 
 // GetByID - GET /api/category/{id}
 func (h *CategoryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/categories/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -114,7 +114,7 @@ func (h *CategoryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/categories/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -148,9 +148,9 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(category)
 }
 
-// Delete - DELETE /api/category/{id}
+// Delete - DELETE /api/categories/{id}
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/categories/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
