@@ -40,11 +40,17 @@ func main() {
 	defer db.Close()
 
 	categoryRepo := repositories.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
+
 	productRepo := repositories.NewProductRepository(db, categoryRepo)
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
-	categoryService := services.NewCategoryService(categoryRepo)
-	categoryHandler := handlers.NewCategoryHandler(categoryService)
+
+	// transaction
+	transactionRepo := repositories.NewTransactionRepository(db)
+	transactionService := services.NewTransactionService(transactionRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	// Setup routes
 	http.HandleFunc("/api/product", productHandler.HandleProducts)
@@ -52,6 +58,8 @@ func main() {
 
 	http.HandleFunc("/api/categories", categoryHandler.HandleCategories)
 	http.HandleFunc("/api/categories/", categoryHandler.HandleCategoriesByID)
+
+	http.HandleFunc("/api/checkout", transactionHandler.HandleCheckout)
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
