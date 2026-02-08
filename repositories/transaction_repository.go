@@ -112,3 +112,50 @@ func (repo *TransactionRepository) CreateTransaction(items []models.CheckoutItem
 	}
 	return res, nil
 }
+
+func (repo *TransactionRepository) Report(start_date string, end_date string) (*models.Report, error) {
+	var report models.Report
+
+	dateFilter := ""
+	args := []interface{}{}
+
+	// check if start_date and end_date is filled
+	if start_date != "" && end_date != "" {
+		dateFilter = "WHERE DATE(t.created_at) >= $1 AND DATE(t.created_at) <= $2"
+		args = append(args, start_date, end_date)
+	} else {
+		dateFilter = "WHERE DATE(t.created_at) = CURRENT_DATE"
+	}
+
+	// get the total revenue and total transasksi
+	queryTotal := fmt.Sprintf(`SELECT COALESCE(SUM(total_amount), 0) as total_revenue, 
+		COUNT(*) as total_transaksi 
+		FROM transactions t 
+		%s`, dateFilter)
+
+	err := repo.db.QueryRow(queryTotal, args...).Scan(&report.TotalRevenue, &report.TotalTransaction)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the most sold product
+	queryTerjual := fmt.Sprintf(`SELECT p.name, COALESCE(SUM(td.quantity), 0) as qty_terjual 
+			FROM transaction_details td 
+			JOIN transactions t ON td.transaction_id = t.id 
+			JOIN products p ON td.product_id = p.id 
+			%s 
+			GROUP BY p.id, p.name LIMIT 1`, dateFilter)
+
+	err = repo.db.QueryRow(queryTerjual, args...).Scan(&report.ProdukTerlaris.Name, &report.ProdukTerlaris.QtySold)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// set data to 0 when no rows
+	if err == sql.ErrNoRows {
+		report.ProdukTerlaris.Name = ""
+		report.ProdukTerlaris.QtySold = 0
+	}
+
+	return &report, nil
+}
