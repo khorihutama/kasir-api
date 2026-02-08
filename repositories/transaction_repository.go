@@ -65,24 +65,42 @@ func (repo *TransactionRepository) CreateTransaction(items []models.CheckoutItem
 
 	// insert trx
 	var transactionID int
-	err = tx.QueryRow("INSERT INTO transactions (total_amount) VALUES ($1) RETURNING ID", totalAmount).Scan(&transactionID)
+	var transactionDate sql.NullTime
+	err = tx.QueryRow("INSERT INTO transactions (total_amount) VALUES ($1) RETURNING ID, created_at", totalAmount).Scan(&transactionID, &transactionDate)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(details)
-	err = fmt.Errorf("cek")
+	// base query
+	queryTrxDetail := "INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES "
+	valueTrxDetail := []interface{}{}
 
-	// insert trxDetail
-	for i := range details {
+	// loop to generate the query string
+	for i, detail := range details {
 		details[i].TransactionID = transactionID
-		_, err = tx.Exec("INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES ($1, $2, $3, $4)", transactionID, details[i].ProductID, details[i].Quantity, details[i].Subtotal)
-		if err != nil {
-			return nil, err
-		}
+		queryTrxDetail += fmt.Sprintf("($%d, $%d, $%d, $%d),", i*4+1, i*4+2, i*4+3, i*4+4)
+		valueTrxDetail = append(valueTrxDetail, transactionID, detail.ProductID, detail.Quantity, detail.Subtotal)
 	}
 
-	if err := tx.Commit(); err != nil {
+	// remove last comma and returning id
+	queryTrxDetail = queryTrxDetail[0:len(queryTrxDetail)-1] + " RETURNING id"
+
+	// use query to get the returning id
+	rows, err := tx.Query(queryTrxDetail, valueTrxDetail...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// loop to scan the returned id
+	i := 0
+	for rows.Next() {
+		if err := rows.Scan(&details[i].ID); err != nil {
+			return nil, err
+		}
+		i++
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
@@ -90,6 +108,7 @@ func (repo *TransactionRepository) CreateTransaction(items []models.CheckoutItem
 		ID:          transactionID,
 		TotalAmount: totalAmount,
 		Details:     details,
+		CreatedAt:   transactionDate.Time,
 	}
 	return res, nil
 }
